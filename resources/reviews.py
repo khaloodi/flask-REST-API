@@ -1,4 +1,5 @@
 from flask import jsonify #turn things into json responses
+from flask import Blueprint
 
 from flask_restful import Resource, Api
 
