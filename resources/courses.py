@@ -1,9 +1,18 @@
 from flask import jsonify #turn things into json responses
 from flask import Blueprint
 
-from flask_restful import Resource, Api, reqparse, inputs
+from flask_restful import (Resource, Api, reqparse ,marshal,
+                        marshal_with, inputs, fields)
 
 import models
+
+#all the fields that describe a course, returned by api:
+course_fields = {
+    'id': fields.Integer,
+    'title': fields.String,
+    'url': fields.String, #note, fields.Url is used to point to another record w/in the Api, this is why we use fields.String
+    'reviews': fields.List(fields.String)
+}
 
 class CourseList(Resource): #resource for a list of courses
     #add parser
@@ -27,7 +36,12 @@ class CourseList(Resource): #resource for a list of courses
         super().__init__()
 
     def get(self): #whenever someone sends a get method to the resource
-        return jsonify({'courses': [{'title': 'Python Basics'}]})
+        # to handle the following: TypeError: Object of type ModelSelect is not JSON serializable
+        # flask uses mashal:  ... [marshal() for item in select statement]
+        # provide marshal with record or records and the fields defined for that resource
+        courses = [marshal(course, course_fields) for course in models.Course.select()] #get all the courses
+        # return jsonify({'courses': [{'title': 'Python Basics'}]})
+        return jsonify({'courses': courses})
 
     def post(self):
         args = self.reqparse.parse_args()
