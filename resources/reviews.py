@@ -1,14 +1,37 @@
-from flask import jsonify #turn things into json responses
-from flask import Blueprint
+from dataclasses import fields
+from flask import jsonify, url_for #turn things into json responses
+from flask import Blueprint, abort
 
-from flask_restful import Resource, Api, reqparse, inputs
+from flask_restful import (Resource, Api, reqparse ,marshal,
+                        marshal_with, inputs, fields, url_for)
 
-import models
+import models 
+
+review_fields = {
+    'id': fields.Integer,
+    'for_course': fields.String,
+    'rating': fields.Integer,
+    'comment': fields.String(default=''),
+    'created_at': fields.DateTime
+}
+
+def review_or_404(review_id):
+    try:
+        review = models.Review.get(models.Review.id == review_id)
+    except models.Review.DoesNotExist:
+        abort(404)
+    else:
+        return review
+
+def add_course(review):
+    review.for_course = url_for('resources.course.course', id=review.course.id)
+    return review
+
 
 class ReviewList(Resource): #resource for a list of courses
     def __init__(self):
         self.reqparse = reqparse.RequestParser()
-        self.reqpars.add_argument(
+        self.reqparse.add_argument(
             'course',
             type=inputs.positive,
             required=True,
@@ -27,7 +50,7 @@ class ReviewList(Resource): #resource for a list of courses
             required=False,
             nullable=True,
             location=['form', 'json'],
-            defaul=''
+            default=''
         )
         super().__init__()
 

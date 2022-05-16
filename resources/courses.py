@@ -49,17 +49,21 @@ class CourseList(Resource): #resource for a list of courses
 
     def get(self): #whenever someone sends a get method to the resource
         # to handle the following: TypeError: Object of type ModelSelect is not JSON serializable
-        # flask uses mashal:  ... [marshal() for item in select statement]
+        # flask uses marshal:  ... [marshal() for item in select statement]
         # provide marshal with record or records and the fields defined for that resource
         courses = [marshal(add_reviews(course), course_fields) for course in models.Course.select()] #get all the courses
         # return jsonify({'courses': [{'title': 'Python Basics'}]})
         return jsonify({'courses': courses})
 
+    @marshal_with(course_fields)
     def post(self):
         args = self.reqparse.parse_args()
         #save the model instance after saving the args; args becomes a dictionary off all the post items
-        models.Course.create(**args) #take the args dictionary, feed all that into Course.create
-        return jsonify({'courses': [{'title': 'Python Basics'}]})
+        course = models.Course.create(**args) #take the args dictionary, feed all that into Course.create
+        # return jsonify({'courses': [{'title': 'Python Basics'}]})
+        return (add_reviews(course), 201, {
+            'Location': url_for('resources.courses.course', id=course.id)
+        })
 
 
 class Course(Resource):
@@ -86,22 +90,32 @@ class Course(Resource):
         return add_reviews(course_or_404(id))
 
     def put(self,id): #include id b/c individual courses will always get an id
-        return jsonify({'title': 'Python Basics'})
+        args = self.reqparse.parse_args()
+        query = models.Course.update(**args).where(models.Course.id==id)
+        query.execute()
+        # return jsonify({'title': 'Python Basics'})
+        return (add_reviews(models.Course.get(models.Course.id==id)),200, #put request is returning JSON data for now, as well as a 200 status code
+                {'Location': url_for('resources.courses.course', id=id)}) #responding w/a location header that says where the data was posted
 
     def delete(self,id): #include id b/c individual courses will always get an id
-        return jsonify({'title': 'Python Basics'})
+        # return jsonify({'title': 'Python Basics'})
+        query = models.Course.delte().where(models.Course.id==id)
+        query.execute()
+        # return jsonify({'title': 'Python Basics'})
+        return ('',204, #responding w/an empty body and 204
+                {'Location': url_for('resources.courses.courses')}) #sending back location header to courses not course to send user to where other stuff is
 
 courses_api = Blueprint('courses', __name__) #kind of like a module/proxy app w/in an app  
                         # ^path to the file, ^namespace that we're in
 api = Api(courses_api) #create an API passingn in the module
 api.add_resource(#resource to add
-    CourseList, #resource to add
+    CourseList, #resource
     '/api/v1/courses', #path or uri to give to that resource 
     endpoint='courses' #endpoint to name it... so we can say "I want the courses endpoing"
 )
 
 api.add_resource(#resource to add
-    Course,
+    Course, #resource
     '/api/v1/courses/<int:id>',
     endpoint='course' #you don't have to provide the endpoint name, flask_restful just lowers the name of the resource if not provided
 )
