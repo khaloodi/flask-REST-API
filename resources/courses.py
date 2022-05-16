@@ -89,6 +89,7 @@ class Course(Resource):
         # return jsonify({'title': 'Python Basics'})
         return add_reviews(course_or_404(id))
 
+    @marshal_with(course_fields)
     def put(self,id): #include id b/c individual courses will always get an id
         args = self.reqparse.parse_args()
         query = models.Course.update(**args).where(models.Course.id==id)
@@ -99,7 +100,7 @@ class Course(Resource):
 
     def delete(self,id): #include id b/c individual courses will always get an id
         # return jsonify({'title': 'Python Basics'})
-        query = models.Course.delte().where(models.Course.id==id)
+        query = models.Course.delete().where(models.Course.id==id)
         query.execute()
         # return jsonify({'title': 'Python Basics'})
         return ('',204, #responding w/an empty body and 204
